@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import type { Database } from '../lib/database.types';
+import { kubernetesService } from './kubernetesService';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 type ProjectInsert = Database['public']['Tables']['projects']['Insert'];
@@ -36,6 +37,15 @@ export const projectService = {
       .single();
 
     if (error) throw error;
+    
+    // 创建Kubernetes命名空间
+    try {
+      await kubernetesService.createNamespace(project.namespace!);
+    } catch (k8sError) {
+      console.error('Failed to create K8s namespace:', k8sError);
+      // 不阻塞项目创建，允许后续手动创建命名空间
+    }
+    
     return data as Project;
   },
 
@@ -53,12 +63,24 @@ export const projectService = {
   },
 
   async deleteProject(id: string): Promise<void> {
+    // 获取项目信息
+    const project = await this.getProjectById(id);
+    
+    // 删除数据库记录
     const { error } = await supabase
       .from('projects')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+    
+    // 删除Kubernetes命名空间
+    try {
+      await kubernetesService.deleteNamespace(project.namespace);
+    } catch (k8sError) {
+      console.error('Failed to delete K8s namespace:', k8sError);
+      // 不阻塞项目删除
+    }
   },
 
   async copyProject(sourceProjectId: string, newName: string, newNamespace: string): Promise<Project> {

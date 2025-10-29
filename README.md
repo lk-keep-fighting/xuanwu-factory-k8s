@@ -39,7 +39,10 @@
 - [React 18](https://react.dev/) - 前端框架
 - [TypeScript](https://www.typescriptlang.org/) - 类型安全
 - [Vite](https://vitejs.dev/) - 构建工具
+- [Tailwind CSS](https://tailwindcss.com/) - CSS框架
+- [shadcn/ui](https://ui.shadcn.com/) - UI组件库
 - [Supabase](https://supabase.com/) - 后端数据库和实时订阅
+- [Kubernetes Client](https://www.npmjs.com/package/@kubernetes/client-node) - K8s SDK
 - [lucide-react](https://lucide.dev/) - 图标组件
 
 ## 快速开始
@@ -152,13 +155,29 @@ npm run dev
 - 使用 Supabase 提供的实时订阅功能监听部署状态变化
 - 构建模板支持通过占位符 `{{VARIABLE}}` 进行参数化配置
 - 项目复制功能会自动复制所有关联的应用配置
+- UI组件使用 shadcn/ui 和 Tailwind CSS 构建
+- Kubernetes 集成通过 `kubernetesService` 实现
+
+## Kubernetes 集成
+
+玄武工厂已集成 Kubernetes SDK，支持：
+
+- ✅ 自动创建和管理 Kubernetes 命名空间
+- ✅ 生成标准的 Deployment 和 Service manifests
+- ✅ 部署应用到 Kubernetes 集群
+- ✅ 实时查看部署进度和日志
+- ✅ Pod 状态监控
+
+详见：[K8S_DEPLOYMENT.md](./K8S_DEPLOYMENT.md)
 
 ## 后续规划
 
-- [ ] 完整的 Kubernetes 集成
+- [x] Kubernetes SDK集成
+- [x] shadcn/ui UI组件重构
 - [ ] GitLab Webhook 自动触发部署
 - [ ] 应用配置管理（环境变量、ConfigMap）
-- [ ] 服务暴露和域名绑定
+- [ ] Ingress 和域名绑定
 - [ ] 应用回滚功能
 - [ ] 多用户和权限管理
 - [ ] CI/CD Pipeline 可视化编辑
+- [ ] 实际的 Docker 镜像构建集成
