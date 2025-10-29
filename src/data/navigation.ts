@@ -6,7 +6,9 @@ import {
   Layers,
   ScrollText,
   Server,
-  ShieldCheck
+  ShieldCheck,
+  FolderGit2,
+  GitMerge
 } from 'lucide-react';
 import { type ComponentType, type SVGProps } from 'react';
 
@@ -18,6 +20,8 @@ export type NavigationItem = {
 
 export const navigationItems: NavigationItem[] = [
   { label: '概览', path: '/', icon: LayoutDashboard },
+  { label: '项目管理', path: '/project-management', icon: FolderGit2 },
+  { label: 'GitLab 集成', path: '/gitlab-integration', icon: GitMerge },
   { label: '项目与构建', path: '/projects', icon: GitBranch },
   { label: '多环境', path: '/environments', icon: Layers },
   { label: '数据库', path: '/databases', icon: Database },
