@@ -1,12 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Play, Settings, Trash2, GitBranch, Package, ArrowLeft } from 'lucide-react';
+import { 
+  Plus, Play, Settings, Trash2, GitBranch, Package, ArrowLeft, 
+  ExternalLink, Clock, RefreshCw, Activity
+} from 'lucide-react';
 import { projectService } from '../services/projectService';
 import { applicationService } from '../services/applicationService';
 import { gitlabService } from '../services/gitlabService';
 import { buildTemplateService } from '../services/buildTemplateService';
 import type { Database } from '../lib/database.types';
-import StatusBadge from '../components/ui/StatusBadge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 type Project = Database['public']['Tables']['projects']['Row'];
 type Application = Database['public']['Tables']['applications']['Row'];
@@ -86,8 +94,8 @@ const ApplicationManagement = () => {
     }
   };
 
-  const handleDeleteApplication = async (id: string) => {
-    if (!confirm('确定要删除此应用吗？此操作将删除所有部署记录！')) return;
+  const handleDeleteApplication = async (id: string, name: string) => {
+    if (!confirm(`确定要删除应用 "${name}" 吗？此操作将删除所有部署记录！`)) return;
 
     try {
       await applicationService.deleteApplication(id);
@@ -98,35 +106,45 @@ const ApplicationManagement = () => {
     }
   };
 
-  const getStatusTone = (status: Application['status']) => {
-    switch (status) {
-      case 'deployed':
-        return 'success';
-      case 'building':
-        return 'info';
-      case 'failed':
-        return 'critical';
-      default:
-        return 'warning';
-    }
+  const getStatusBadge = (status: Application['status']) => {
+    const statusConfig = {
+      deployed: { label: '已部署', variant: 'success' as const },
+      building: { label: '构建中', variant: 'info' as const },
+      pending: { label: '等待中', variant: 'warning' as const },
+      failed: { label: '失败', variant: 'destructive' as const },
+      stopped: { label: '已停止', variant: 'outline' as const },
+    };
+
+    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
+    return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
-  const getStatusText = (status: Application['status']) => {
-    const statusMap = {
-      pending: '等待中',
-      building: '构建中',
-      deployed: '已部署',
-      failed: '失败',
-      stopped: '已停止',
+  const getBuildTypeLabel = (buildType: string) => {
+    const labels: Record<string, string> = {
+      dockerfile: 'Dockerfile',
+      java17: 'Java 17',
+      java21: 'Java 21',
+      python: 'Python',
+      nodejs: 'Node.js',
     };
-    return statusMap[status] || status;
+    return labels[buildType] || buildType;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('zh-CN', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(date);
   };
 
   if (loading) {
     return (
-      <div className="page">
+      <div className="container mx-auto py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">加载中...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </div>
     );
@@ -134,216 +152,265 @@ const ApplicationManagement = () => {
 
   if (!project) {
     return (
-      <div className="page">
+      <div className="container mx-auto py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">项目不存在</p>
+          <p className="text-muted-foreground">项目不存在</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="page">
-      <section className="page__section">
-        <div className="flex items-center gap-4 mb-6">
-          <button
-            type="button"
-            className="button button--ghost"
+    <div className="container mx-auto py-8 px-4">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-4">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => navigate('/project-management')}
           >
-            <ArrowLeft size={16} />
-          </button>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div className="flex-1">
-            <h2 className="section__title">{project.name}</h2>
-            <p className="section__subtitle">命名空间: {project.namespace}</p>
+            <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+            <div className="flex items-center gap-2 mt-2">
+              <Badge variant="outline" className="font-mono text-xs">
+                {project.namespace}
+              </Badge>
+              {project.description && (
+                <span className="text-sm text-muted-foreground">{project.description}</span>
+              )}
+            </div>
           </div>
-          <button
-            type="button"
-            className="button button--primary"
-            onClick={() => setShowCreateModal(true)}
-          >
-            <Plus size={16} />
+          <Button onClick={() => setShowCreateModal(true)} size="lg">
+            <Plus className="mr-2 h-4 w-4" />
             新建应用
-          </button>
+          </Button>
         </div>
 
-        {applications.length === 0 ? (
-          <div className="card card--bordered text-center py-12">
-            <Package size={48} className="mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">暂无应用</h3>
-            <p className="text-gray-500 mb-4">在此项目中创建第一个应用</p>
-            <button
-              type="button"
-              className="button button--primary"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <Plus size={16} />
+        {/* Quick Stats */}
+        <div className="grid gap-4 md:grid-cols-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">应用总数</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{applications.length}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">运行中</CardTitle>
+              <Activity className="h-4 w-4 text-green-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {applications.filter(app => app.status === 'deployed').length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">构建中</CardTitle>
+              <RefreshCw className="h-4 w-4 text-blue-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {applications.filter(app => app.status === 'building').length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">失败</CardTitle>
+              <ExternalLink className="h-4 w-4 text-red-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {applications.filter(app => app.status === 'failed').length}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Applications List */}
+      {applications.length === 0 ? (
+        <Card className="py-16">
+          <CardContent className="text-center">
+            <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">暂无应用</h3>
+            <p className="text-muted-foreground mb-6">
+              在此项目中创建第一个应用
+            </p>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
               新建应用
-            </button>
-          </div>
-        ) : (
-          <div className="stack stack--gap-lg">
-            {applications.map((app) => (
-              <div className="card card--bordered" key={app.id}>
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">{app.name}</h3>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <GitBranch size={14} />
-                        {app.gitlab_branch}
-                      </span>
-                      <span>{app.gitlab_repo}</span>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {applications.map((app) => (
+            <Card key={app.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <CardTitle className="text-xl">{app.name}</CardTitle>
+                      {getStatusBadge(app.status)}
+                    </div>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <GitBranch className="h-3 w-3" />
+                        <span>{app.gitlab_branch}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Package className="h-3 w-3" />
+                        <span>{getBuildTypeLabel(app.build_type)}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>更新于 {formatDate(app.updated_at)}</span>
+                      </div>
                     </div>
                   </div>
-                  <StatusBadge tone={getStatusTone(app.status)}>
-                    {getStatusText(app.status)}
-                  </StatusBadge>
                 </div>
+                <CardDescription className="line-clamp-1">
+                  {app.gitlab_repo}
+                </CardDescription>
+              </CardHeader>
 
-                <div className="grid grid--cols-3 gap-4 mb-4 text-sm">
-                  <div>
-                    <span className="text-gray-500">构建方式</span>
-                    <p className="font-medium">{app.build_type}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">创建时间</span>
-                    <p className="font-medium">{new Date(app.created_at).toLocaleString('zh-CN')}</p>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">更新时间</span>
-                    <p className="font-medium">{new Date(app.updated_at).toLocaleString('zh-CN')}</p>
-                  </div>
-                </div>
+              <CardFooter className="flex gap-2">
+                <Button
+                  onClick={() => navigate(`/applications/${app.id}/deploy`)}
+                  size="sm"
+                >
+                  <Play className="mr-2 h-3 w-3" />
+                  部署
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/applications/${app.id}/settings`)}
+                >
+                  <Settings className="mr-2 h-3 w-3" />
+                  配置
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDeleteApplication(app.id, app.name)}
+                  className="ml-auto"
+                >
+                  <Trash2 className="mr-2 h-3 w-3" />
+                  删除
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
 
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="button button--primary"
-                    onClick={() => navigate(`/applications/${app.id}/deploy`)}
-                  >
-                    <Play size={14} />
-                    部署
-                  </button>
-                  <button
-                    type="button"
-                    className="button button--secondary"
-                    onClick={() => navigate(`/applications/${app.id}/settings`)}
-                  >
-                    <Settings size={14} />
-                    配置
-                  </button>
-                  <button
-                    type="button"
-                    className="button button--ghost text-red-600"
-                    onClick={() => handleDeleteApplication(app.id)}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Create Application Dialog */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>新建应用</DialogTitle>
+            <DialogDescription>
+              创建一个新应用并关联 GitLab 仓库
+            </DialogDescription>
+          </DialogHeader>
 
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal modal--large" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-semibold mb-4">新建应用</h3>
-            <form onSubmit={handleCreateApplication}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">应用名称</label>
-                <input
-                  type="text"
-                  className="input"
+          <form onSubmit={handleCreateApplication}>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="app-name">应用名称 *</Label>
+                <Input
+                  id="app-name"
+                  placeholder="例如: 用户服务"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  placeholder="例如: 用户服务"
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">GitLab 仓库</label>
-                <input
-                  type="text"
-                  className="input"
+              <div className="space-y-2">
+                <Label htmlFor="gitlab-repo">GitLab 仓库 *</Label>
+                <Input
+                  id="gitlab-repo"
+                  placeholder="例如: git@gitlab.com:group/project.git"
                   value={formData.gitlab_repo}
                   onChange={(e) => setFormData({ ...formData, gitlab_repo: e.target.value })}
                   required
-                  placeholder="例如: git@gitlab.com:group/project.git"
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">分支</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={formData.gitlab_branch}
-                  onChange={(e) => setFormData({ ...formData, gitlab_branch: e.target.value })}
-                  required
-                  placeholder="main"
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="branch">分支 *</Label>
+                  <Input
+                    id="branch"
+                    placeholder="main"
+                    value={formData.gitlab_branch}
+                    onChange={(e) => setFormData({ ...formData, gitlab_branch: e.target.value })}
+                    required
+                  />
+                </div>
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2">构建方式</label>
-                <select
-                  className="input"
-                  value={formData.build_type}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    build_type: e.target.value as any,
-                  })}
-                >
-                  <option value="dockerfile">自定义 Dockerfile</option>
-                  <option value="java17">Java 17 模板</option>
-                  <option value="java21">Java 21 模板</option>
-                  <option value="python">Python 模板</option>
-                  <option value="nodejs">Node.js 模板</option>
-                </select>
+                <div className="space-y-2">
+                  <Label htmlFor="build-type">构建方式 *</Label>
+                  <select
+                    id="build-type"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    value={formData.build_type}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      build_type: e.target.value as any,
+                    })}
+                  >
+                    <option value="dockerfile">自定义 Dockerfile</option>
+                    <option value="java17">Java 17 模板</option>
+                    <option value="java21">Java 21 模板</option>
+                    <option value="python">Python 模板</option>
+                    <option value="nodejs">Node.js 模板</option>
+                  </select>
+                </div>
               </div>
 
               {formData.build_type === 'dockerfile' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">Dockerfile 路径</label>
-                  <input
-                    type="text"
-                    className="input"
+                <div className="space-y-2">
+                  <Label htmlFor="dockerfile-path">Dockerfile 路径</Label>
+                  <Input
+                    id="dockerfile-path"
+                    placeholder="Dockerfile"
                     value={formData.dockerfile_path}
                     onChange={(e) => setFormData({ ...formData, dockerfile_path: e.target.value })}
-                    placeholder="Dockerfile"
                   />
                 </div>
               )}
 
               {formData.build_type !== 'dockerfile' && (
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-2">模板配置</label>
-                  <p className="text-sm text-gray-500 mb-2">
-                    使用 {formData.build_type} 构建模板，可在应用创建后进行详细配置
+                <div className="rounded-lg bg-muted p-4">
+                  <p className="text-sm text-muted-foreground">
+                    使用 <strong>{getBuildTypeLabel(formData.build_type)}</strong> 构建模板，
+                    可在应用创建后进行详细配置
                   </p>
                 </div>
               )}
+            </div>
 
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  className="button button--ghost"
-                  onClick={() => setShowCreateModal(false)}
-                >
-                  取消
-                </button>
-                <button type="submit" className="button button--primary">
-                  创建
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowCreateModal(false)}>
+                取消
+              </Button>
+              <Button type="submit">创建应用</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -4,9 +4,12 @@
 
 ## 核心功能
 
-### 项目管理
+### 项目管理（参考 Dokploy）
 - **项目创建**：每个项目对应一个独立的 Kubernetes 命名空间
+- **项目详情**：多标签页展示项目信息、应用列表、活动历史
 - **项目复制**：支持批量复制项目配置和应用到新项目
+- **统计面板**：实时显示项目数、应用数、部署状态等
+- **卡片式布局**：直观展示项目信息和快速操作
 - **命名空间隔离**：基于 K8s namespace 实现项目资源隔离
 
 ### GitLab 集成
@@ -88,13 +91,24 @@ npm run dev
 ├── src/
 │   ├── components/         # 可复用界面组件
 │   │   ├── layout/         # 布局组件
-│   │   └── ui/             # UI 组件
+│   │   └── ui/             # shadcn/ui 组件
+│   │       ├── button.tsx
+│   │       ├── card.tsx
+│   │       ├── dialog.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── badge.tsx
+│   │       ├── textarea.tsx
+│   │       └── tabs.tsx
 │   ├── data/               # 数据类型和导航配置
 │   ├── lib/                # 核心库
-│   │   ├── supabase.ts     # Supabase 客户端
-│   │   └── database.types.ts # 数据库类型定义
+│   │   ├── supabase.ts          # Supabase 客户端
+│   │   ├── database.types.ts    # 数据库类型定义
+│   │   ├── k8s-config.ts        # Kubernetes 配置
+│   │   └── utils.ts             # 工具函数
 │   ├── pages/              # 页面组件
-│   │   ├── ProjectManagement.tsx      # 项目管理
+│   │   ├── ProjectManagement.tsx      # 项目管理（Dokploy风格）
+│   │   ├── ProjectDetail.tsx          # 项目详情（多标签页）
 │   │   ├── ApplicationManagement.tsx  # 应用管理
 │   │   ├── ApplicationDeployment.tsx  # 应用部署
 │   │   └── GitLabIntegration.tsx      # GitLab 集成
@@ -170,10 +184,25 @@ npm run dev
 
 详见：[K8S_DEPLOYMENT.md](./K8S_DEPLOYMENT.md)
 
+## 项目管理功能（Dokploy 风格）
+
+本项目的项目管理功能参考了 [Dokploy](https://dokploy.com/) 的设计理念：
+
+### 主要特性
+- ✅ **卡片式项目列表**: 清晰的视觉层次和信息展示
+- ✅ **统计面板**: 实时显示系统状态和关键指标
+- ✅ **项目详情多标签页**: 概览、应用、活动、设置
+- ✅ **状态徽章**: 直观的颜色编码系统
+- ✅ **快速操作**: 常用功能一键触达
+
+详见：[PROJECT_MANAGEMENT_DOKPLOY.md](./PROJECT_MANAGEMENT_DOKPLOY.md)
+
 ## 后续规划
 
 - [x] Kubernetes SDK集成
 - [x] shadcn/ui UI组件重构
+- [x] Dokploy 风格项目管理
+- [x] 项目详情多标签页
 - [ ] GitLab Webhook 自动触发部署
 - [ ] 应用配置管理（环境变量、ConfigMap）
 - [ ] Ingress 和域名绑定

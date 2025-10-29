@@ -3,6 +3,7 @@ import MainLayout from './components/layout/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectManagement from './pages/ProjectManagement';
+import ProjectDetail from './pages/ProjectDetail';
 import ApplicationManagement from './pages/ApplicationManagement';
 import ApplicationDeployment from './pages/ApplicationDeployment';
 import GitLabIntegration from './pages/GitLabIntegration';
@@ -20,6 +21,7 @@ const App = () => {
         <Route index element={<Dashboard />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/project-management" element={<ProjectManagement />} />
+        <Route path="/projects/:projectId" element={<ProjectDetail />} />
         <Route path="/projects/:projectId/applications" element={<ApplicationManagement />} />
         <Route path="/applications/:applicationId/deploy" element={<ApplicationDeployment />} />
         <Route path="/gitlab-integration" element={<GitLabIntegration />} />
