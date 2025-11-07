@@ -24,7 +24,7 @@ const Sidebar = () => {
                 clsx('sidebar__nav-item', isActive && 'sidebar__nav-item--active')
               }
             >
-              <Icon className="sidebar__nav-icon" size={18} />
+              <Icon className="sidebar__nav-icon" width={18} height={18} />
               <span>{item.label}</span>
             </NavLink>
           );
